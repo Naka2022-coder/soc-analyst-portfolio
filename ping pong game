@@ -1,0 +1,226 @@
+const canvas = document.getElementById('pongCanvas');
+const ctx = canvas.getContext('2d');
+
+// Game settings
+const PADDLE_WIDTH = 10;
+const PADDLE_HEIGHT = 100;
+const BALL_SIZE = 14;
+const PADDLE_SPEED = 7; // AI paddle speed
+const BALL_SPEED = 6;
+const CANVAS_WIDTH = canvas.width;
+const CANVAS_HEIGHT = canvas.height;
+
+// Paddle objects
+let leftPaddle = {body {
+  background: #222;
+  color: #fff;<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple Pong Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="pongCanvas" width="800" height="500"></canvas>
+    <div id="score">
+      <span id="score-left">0</span> : <span id="score-right">0</span>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+
+#game-container {
+  display: inline-block;
+  position: relative;
+  margin-top: 40px;
+}
+
+#pongCanvas {
+  background: #111;
+  border: 5px solid #fff;
+  display: block;
+}
+
+#score {
+  position: absolute;
+  top: 18px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 2em;
+  font-weight: bold;
+  pointer-events: none;
+  user-select: none;
+  text-shadow: 0 0 6px #000;
+}
+  x: 20,
+  y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
+  width: PADDLE_WIDTH,
+  height: PADDLE_HEIGHT
+};
+
+let rightPaddle = {
+  x: CANVAS_WIDTH - 20 - PADDLE_WIDTH,
+  y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
+  width: PADDLE_WIDTH,
+  height: PADDLE_HEIGHT
+};
+
+// Ball object
+let ball = {
+  x: CANVAS_WIDTH / 2 - BALL_SIZE / 2,
+  y: CANVAS_HEIGHT / 2 - BALL_SIZE / 2,
+  size: BALL_SIZE,
+  speedX: BALL_SPEED * (Math.random() > 0.5 ? 1 : -1),
+  speedY: BALL_SPEED * (Math.random() > 0.5 ? 1 : -1)
+};
+
+let scoreLeft = 0;
+let scoreRight = 0;
+
+// Mouse control for left paddle
+canvas.addEventListener('mousemove', function(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mouseY = e.clientY - rect.top;
+  leftPaddle.y = mouseY - leftPaddle.height / 2;
+  // Clamp paddle within canvas
+  leftPaddle.y = Math.max(0, Math.min(CANVAS_HEIGHT - leftPaddle.height, leftPaddle.y));
+});
+
+// Reset ball to center after a score
+function resetBall() {
+  ball.x = CANVAS_WIDTH / 2 - BALL_SIZE / 2;
+  ball.y = CANVAS_HEIGHT / 2 - BALL_SIZE / 2;
+  ball.speedX = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
+  ball.speedY = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
+}
+
+// Draw paddles and ball
+function drawRect(x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+}
+
+function drawBall(x, y, size, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Draw everything
+function draw() {
+  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+  // Draw net
+  ctx.strokeStyle = '#555';
+  ctx.beginPath();
+  for(let i = 0; i < CANVAS_HEIGHT; i += 30){
+    ctx.moveTo(CANVAS_WIDTH / 2, i);
+    ctx.lineTo(CANVAS_WIDTH / 2, i + 15);
+  }
+  ctx.stroke();
+
+  // Draw paddles
+  drawRect(leftPaddle.x, leftPaddle.y, leftPaddle.width, leftPaddle.height, "#0ff");
+  drawRect(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height, "#f00");
+
+  // Draw ball
+  drawBall(ball.x, ball.y, ball.size, "#fff");
+}
+
+// Basic AI for right paddle
+function moveAIPaddle() {
+  const paddleCenter = rightPaddle.y + rightPaddle.height / 2;
+  const ballCenter = ball.y + ball.size / 2;
+  if (paddleCenter < ballCenter - 10) {
+    rightPaddle.y += PADDLE_SPEED;
+  } else if (paddleCenter > ballCenter + 10) {
+    rightPaddle.y -= PADDLE_SPEED;
+  }
+  // Clamp paddle within canvas
+  rightPaddle.y = Math.max(0, Math.min(CANVAS_HEIGHT - rightPaddle.height, rightPaddle.y));
+}
+
+// Collision detection
+function checkCollision(paddle) {
+  // Ball position
+  const ballLeft = ball.x;
+  const ballRight = ball.x + ball.size;
+  const ballTop = ball.y;
+  const ballBottom = ball.y + ball.size;
+
+  // Paddle position
+  const paddleLeft = paddle.x;
+  const paddleRight = paddle.x + paddle.width;
+  const paddleTop = paddle.y;
+  const paddleBottom = paddle.y + paddle.height;
+
+  // Check for collision
+  return (
+    ballRight > paddleLeft &&
+    ballLeft < paddleRight &&
+    ballBottom > paddleTop &&
+    ballTop < paddleBottom
+  );
+}
+
+// Main game update loop
+function update() {
+  // Move ball
+  ball.x += ball.speedX;
+  ball.y += ball.speedY;
+
+  // Ball collision with top/bottom walls
+  if (ball.y <= 0 || ball.y + ball.size >= CANVAS_HEIGHT) {
+    ball.speedY *= -1;
+    ball.y = Math.max(0, Math.min(CANVAS_HEIGHT - ball.size, ball.y));
+  }
+
+  // Ball collision with left paddle
+  if (checkCollision(leftPaddle)) {
+    ball.speedX *= -1;
+    // Add some variation based on where the ball hits the paddle
+    let hitPoint = ((ball.y + ball.size/2) - (leftPaddle.y + leftPaddle.height/2)) / (leftPaddle.height/2);
+    ball.speedY += hitPoint * 2;
+    ball.x = leftPaddle.x + leftPaddle.width + 1;
+  }
+
+  // Ball collision with right paddle
+  if (checkCollision(rightPaddle)) {
+    ball.speedX *= -1;
+    let hitPoint = ((ball.y + ball.size/2) - (rightPaddle.y + rightPaddle.height/2)) / (rightPaddle.height/2);
+    ball.speedY += hitPoint * 2;
+    ball.x = rightPaddle.x - ball.size - 1;
+  }
+
+  // Ball out of bounds (score)
+  if (ball.x < 0) {
+    scoreRight++;
+    document.getElementById('score-right').innerText = scoreRight;
+    resetBall();
+  } else if (ball.x + ball.size > CANVAS_WIDTH) {
+    scoreLeft++;
+    document.getElementById('score-left').innerText = scoreLeft;
+    resetBall();
+  }
+
+  // Move AI paddle
+  moveAIPaddle();
+
+  // Draw everything
+  draw();
+
+  requestAnimationFrame(update);
+}
+
+// Start game
+draw();
+update();
